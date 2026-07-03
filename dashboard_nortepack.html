@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Operativo — Nortepack</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg-base: #0a0c10;
+    --bg-card: #111318;
+    --bg-card-hover: #161920;
+    --bg-table-row: #0d1017;
+    --border: #1e2330;
+    --border-light: #252d3d;
+    --accent-green: #00d084;
+    --accent-green-dim: rgba(0, 208, 132, 0.12);
+    --accent-blue: #3b82f6;
+    --accent-blue-dim: rgba(59, 130, 246, 0.12);
+    --accent-amber: #f59e0b;
+    --accent-amber-dim: rgba(245, 158, 11, 0.12);
+    --accent-red: #ef4444;
+    --accent-red-dim: rgba(239, 68, 68, 0.12);
+    --text-primary: #f0f4ff;
+    --text-secondary: #8b95b0;
+    --text-muted: #4a5568;
+    --nortepack-green: #00d084;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* HEADER */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-badge {
+    width: 36px;
+    height: 36px;
+    background: var(--accent-green);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #000;
+    letter-spacing: -0.5px;
+  }
+
+  .header-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .header-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 1px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-green-dim);
+    border: 1px solid rgba(0, 208, 132, 0.25);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent-green);
+    letter-spacing: 0.3px;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .last-update {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* MAIN */
+  .main {
+    padding: 28px 32px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .kpi-card:hover { border-color: var(--border-light); }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .kpi-card.green::before { background: var(--accent-green); }
+  .kpi-card.blue::before { background: var(--accent-blue); }
+  .kpi-card.amber::before { background: var(--accent-amber); }
+  .kpi-card.red::before { background: var(--accent-red); }
+
+  .kpi-icon {
+    font-size: 18px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .kpi-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .kpi-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    letter-spacing: 0.2px;
+  }
+
+  /* CHARTS GRID */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.8fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .card-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  .chart-container {
+    position: relative;
+    height: 220px;
+  }
+
+  /* TABLE */
+  .table-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+
+  .table-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .table-scroll { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg-card-hover); }
+
+  tbody td {
+    padding: 13px 16px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  tbody td:first-child { color: var(--text-primary); font-weight: 500; }
+
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .badge-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+
+  .badge.pendiente {
+    background: var(--accent-amber-dim);
+    color: var(--accent-amber);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+  }
+  .badge.pendiente .badge-dot { background: var(--accent-amber); }
+
+  .badge.aprobado {
+    background: var(--accent-green-dim);
+    color: var(--accent-green);
+    border: 1px solid rgba(0, 208, 132, 0.2);
+  }
+  .badge.aprobado .badge-dot { background: var(--accent-green); }
+
+  .badge.entregado {
+    background: rgba(139, 149, 176, 0.1);
+    color: var(--text-muted);
+    border: 1px solid rgba(139, 149, 176, 0.15);
+  }
+  .badge.entregado .badge-dot { background: var(--text-muted); }
+
+  /* PENDING APPROVALS */
+  .pending-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+  }
+
+  .pending-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-left: 3px solid var(--accent-amber);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  .pending-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .pending-vendor {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .pending-discount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-amber);
+  }
+
+  .pending-detail {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+
+  .pending-detail span { color: var(--text-primary); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .empty-icon { font-size: 32px; margin-bottom: 10px; }
+
+  /* LOADING */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    flex-direction: column;
+    gap: 12px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent-green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* DISCOUNT HIGH */
+  .discount-high { color: var(--accent-amber); font-weight: 600; }
+
+  /* RESPONSIVE */
+  @media (max-width: 1100px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 640px) {
+    .main { padding: 16px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .header { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo-badge">NP</div>
+    <div>
+      <div class="header-title">Nortepack S.A. de C.V.</div>
+      <div class="header-subtitle">Dashboard Operativo — Control de Pedidos</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      En vivo
+    </div>
+    <div class="last-update" id="lastUpdate">Cargando...</div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- KPIs -->
+  <div class="section-label">Resumen operativo</div>
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="loading" style="grid-column: 1/-1; height:100px"><div class="spinner"></div><span>Cargando datos...</span></div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="section-label">Análisis de ventas</div>
+  <div class="charts-grid">
+    <div class="card">
+      <div class="card-title">Ventas por vendedor</div>
+      <div class="card-subtitle">Ranking del período actual</div>
+      <div class="chart-container">
+        <canvas id="vendedoresChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tendencia de pedidos</div>
+      <div class="card-subtitle">Pedidos registrados por día</div>
+      <div class="chart-container">
+        <canvas id="tendenciaChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- PEDIDOS TABLE -->
+  <div class="section-label">Pedidos en tiempo real</div>
+  <div class="table-card">
+    <div class="table-header">
+      <div>
+        <div class="card-title">Registro de pedidos</div>
+        <div class="card-subtitle" style="margin-bottom:0">Todos los pedidos registrados — actualización automática</div>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Vendedor</th>
+            <th>Cliente</th>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Precio unit.</th>
+            <th>Descuento</th>
+            <th>Estatus</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="pedidosTable">
+          <tr><td colspan="8"><div class="loading"><div class="spinner"></div><span>Cargando pedidos...</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PENDING APPROVALS -->
+  <div class="section-label">Pendientes de aprobación</div>
+  <div id="pendingSection">
+    <div class="loading"><div class="spinner"></div><span>Verificando...</span></div>
+  </div>
+
+</main>
+
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTngTPGbLqNEI6tGYLLDKphVz2A8VSrqdKPOmMhni4kUh8xK8CO3DA5FBNScqfFsiJB__sXhow_gH9ea/pub?gid=0&single=true&output=csv';
+
+let vendedoresChartInstance = null;
+let tendenciaChartInstance = null;
+
+Chart.defaults.color = '#8b95b0';
+Chart.defaults.borderColor = '#1e2330';
+Chart.defaults.font.family = 'Inter';
+
+function parseNum(val) {
+  if (!val) return 0;
+  return parseFloat(String(val).replace(/[^0-9.-]/g, '')) || 0;
+}
+
+function formatMXN(num) {
+  if (num >= 1000000) return '$' + (num/1000000).toFixed(1) + 'M';
+  if (num >= 1000) return '$' + (num/1000).toFixed(1) + 'K';
+  return '$' + num.toFixed(0);
+}
+
+function formatDate(str) {
+  if (!str) return '—';
+  const d = new Date(str);
+  if (isNaN(d)) return str.substring(0, 10);
+  return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' });
+}
+
+function getBadge(estatus) {
+  const s = (estatus || '').toLowerCase().trim();
+  if (s.includes('aprobado')) return `<span class="badge aprobado"><span class="badge-dot"></span>Aprobado</span>`;
+  if (s.includes('entregado')) return `<span class="badge entregado"><span class="badge-dot"></span>Entregado</span>`;
+  return `<span class="badge pendiente"><span class="badge-dot"></span>Pendiente</span>`;
+}
+
+function renderKPIs(data) {
+  const totalPedidos = data.length;
+  const ventasTotales = data.reduce((s, r) => s + parseNum(r['Precio unitario']), 0);
+  const unidadesPedidas = data.reduce((s, r) => s + parseNum(r['Cantidad']), 0);
+  const descuentos = data.map(r => parseNum(r['Descuento solicitado (%)'])).filter(d => d > 0);
+  const descuentoPromedio = descuentos.length ? (descuentos.reduce((a, b) => a + b, 0) / descuentos.length) : 0;
+  const pendientesAprobacion = data.filter(r => parseNum(r['Descuento solicitado (%)']) > 10).length;
+  const ticketPromedio = totalPedidos ? ventasTotales / totalPedidos : 0;
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card green">
+      <span class="kpi-icon">📦</span>
+      <div class="kpi-value">${totalPedidos}</div>
+      <div class="kpi-label">Total de pedidos</div>
+    </div>
+    <div class="kpi-card green">
+      <span class="kpi-icon">💰</span>
+      <div class="kpi-value">${formatMXN(ventasTotales)}</div>
+      <div class="kpi-label">Ventas totales</div>
+    </div>
+    <div class="kpi-card blue">
+      <span class="kpi-icon">📊</span>
+      <div class="kpi-value">${unidadesPedidas.toLocaleString()}</div>
+      <div class="kpi-label">Unidades pedidas</div>
+    </div>
+    <div class="kpi-card blue">
+      <span class="kpi-icon">🎯</span>
+      <div class="kpi-value">${formatMXN(ticketPromedio)}</div>
+      <div class="kpi-label">Ticket promedio</div>
+    </div>
+    <div class="kpi-card amber">
+      <span class="kpi-icon">📉</span>
+      <div class="kpi-value">${descuentoPromedio.toFixed(1)}%</div>
+      <div class="kpi-label">Descuento promedio</div>
+    </div>
+    <div class="kpi-card ${pendientesAprobacion > 0 ? 'red' : 'green'}">
+      <span class="kpi-icon">${pendientesAprobacion > 0 ? '⚠️' : '✅'}</span>
+      <div class="kpi-value">${pendientesAprobacion}</div>
+      <div class="kpi-label">Pend. aprobación</div>
+    </div>
+  `;
+}
+
+function renderVendedoresChart(data) {
+  const vendedores = {};
+  data.forEach(r => {
+    const v = r['Nombre del vendedor'] || 'Sin nombre';
+    vendedores[v] = (vendedores[v] || 0) + parseNum(r['Precio unitario']);
+  });
+  const sorted = Object.entries(vendedores).sort((a, b) => b[1] - a[1]);
+  const labels = sorted.map(e => e[0]);
+  const values = sorted.map(e => e[1]);
+
+  if (vendedoresChartInstance) vendedoresChartInstance.destroy();
+
+  const ctx = document.getElementById('vendedoresChart').getContext('2d');
+  vendedoresChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: labels.map((_, i) => i === 0 ? 'rgba(0, 208, 132, 0.8)' : 'rgba(59, 130, 246, 0.5)'),
+        borderColor: labels.map((_, i) => i === 0 ? '#00d084' : '#3b82f6'),
+        borderWidth: 1,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid: { color: '#1e2330' },
+          ticks: { callback: v => formatMXN(v), font: { size: 10, family: 'JetBrains Mono' } }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+function renderTendenciaChart(data) {
+  const porDia = {};
+  data.forEach(r => {
+    const fecha = r['Fecha Y Hora'] ? r['Fecha Y Hora'].substring(0, 10) : 'Sin fecha';
+    porDia[fecha] = (porDia[fecha] || 0) + 1;
+  });
+  const sorted = Object.entries(porDia).sort((a, b) => a[0].localeCompare(b[0]));
+  const labels = sorted.map(e => {
+    const d = new Date(e[0]);
+    return isNaN(d) ? e[0] : d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+  });
+  const values = sorted.map(e => e[1]);
+
+  if (tendenciaChartInstance) tendenciaChartInstance.destroy();
+
+  const ctx = document.getElementById('tendenciaChart').getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+  gradient.addColorStop(0, 'rgba(0, 208, 132, 0.2)');
+  gradient.addColorStop(1, 'rgba(0, 208, 132, 0)');
+
+  tendenciaChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: '#00d084',
+        backgroundColor: gradient,
+        borderWidth: 2,
+        pointBackgroundColor: '#00d084',
+        pointBorderColor: '#0a0c10',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          grid: { color: '#1e2330' },
+          ticks: { font: { size: 10 } }
+        },
+        y: {
+          grid: { color: '#1e2330' },
+          ticks: { stepSize: 1, font: { size: 10, family: 'JetBrains Mono' } },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+function renderTable(data) {
+  const tbody = document.getElementById('pedidosTable');
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📭</div>No hay pedidos registrados todavía</div></td></tr>`;
+    return;
+  }
+  const sorted = [...data].reverse();
+  tbody.innerHTML = sorted.map(r => {
+    const descuento = parseNum(r['Descuento solicitado (%)']);
+    const descuentoClass = descuento > 10 ? 'discount-high' : '';
+    return `
+      <tr>
+        <td>${r['Nombre del vendedor'] || '—'}</td>
+        <td>${r['Cliente'] || '—'}</td>
+        <td>${r['Producto(s) pedido(s)'] || '—'}</td>
+        <td class="mono">${r['Cantidad'] || '—'}</td>
+        <td class="mono">$${r['Precio unitario'] || '—'}</td>
+        <td class="mono ${descuentoClass}">${descuento > 0 ? descuento + '%' : '—'}</td>
+        <td>${getBadge(r['Estatus, Pendiente, Aprobado, Entregado).'] || r['Estatus'] || '')}</td>
+        <td class="mono" style="font-size:11px">${formatDate(r['Fecha Y Hora'])}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderPending(data) {
+  const pending = data.filter(r => parseNum(r['Descuento solicitado (%)']) > 10);
+  const section = document.getElementById('pendingSection');
+
+  if (!pending.length) {
+    section.innerHTML = `
+      <div class="card">
+        <div class="empty-state">
+          <div class="empty-icon">✅</div>
+          Sin pedidos pendientes de aprobación
+        </div>
+      </div>`;
+    return;
+  }
+
+  section.innerHTML = `<div class="pending-grid">${pending.map(r => `
+    <div class="pending-card">
+      <div class="pending-card-header">
+        <div class="pending-vendor">${r['Nombre del vendedor'] || '—'}</div>
+        <div class="pending-discount">${r['Descuento solicitado (%)']}% desc.</div>
+      </div>
+      <div class="pending-detail">Cliente: <span>${r['Cliente'] || '—'}</span></div>
+      <div class="pending-detail">Producto: <span>${r['Producto(s) pedido(s)'] || '—'}</span></div>
+      <div class="pending-detail">Cantidad: <span>${r['Cantidad'] || '—'}</span> · Precio: <span>$${r['Precio unitario'] || '—'}</span></div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function loadData() {
+  Papa.parse(CSV_URL, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      const data = results.data.filter(r => r['Nombre del vendedor'] && r['Nombre del vendedor'].trim() !== '');
+      if (!data.length) {
+        document.getElementById('kpiGrid').innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📭</div>No hay datos disponibles todavía. Los pedidos aparecerán aquí automáticamente cuando se registren.</div>`;
+        return;
+      }
+      renderKPIs(data);
+      renderVendedoresChart(data);
+      renderTendenciaChart(data);
+      renderTable(data);
+      renderPending(data);
+      const now = new Date();
+      document.getElementById('lastUpdate').textContent = `Actualizado ${now.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'})}`;
+    },
+    error: function() {
+      document.getElementById('kpiGrid').innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">⚠️</div>Error al cargar datos. Verifica que el Google Sheet esté publicado como CSV.</div>`;
+    }
+  });
+}
+
+// Load on start, refresh every 2 minutes
+loadData();
+setInterval(loadData, 120000);
+</script>
+</body>
+</html>
